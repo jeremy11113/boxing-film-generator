@@ -1,0 +1,46 @@
+QUICK START - Boxing Film Generator on Windows
+===============================================
+
+1. INSTALL PYTHON:
+   - Go to python.org/downloads
+   - Download Python 3.11+
+   - Install and CHECK "Add Python to PATH"
+
+2. OPEN COMMAND PROMPT:
+   - Press Win + R
+   - Type: cmd
+   - Press Enter
+
+3. NAVIGATE TO PROJECT:
+   cd path\to\boxing-film-generator
+
+4. CREATE VIRTUAL ENVIRONMENT:
+   python -m venv venv
+   venv\Scripts\activate
+
+5. INSTALL DEPENDENCIES:
+   pip install -r requirements.txt
+
+6. SET UP API KEYS:
+   - Copy .env.example to .env
+   - Open .env in Notepad
+   - Add your OpenAI API key
+   - Add your Runway API key (optional, for videos)
+   - Save
+
+7. RUN THE GENERATOR:
+   python src/main.py -p "Your prompt here" -s stylized_sexy
+
+8. CHECK OUTPUT:
+   - Look in the 'output' folder
+   - Find video_prompts.json for Runway ML
+   - Find screenplay.md for the full story
+
+TROUBLESHOOTING:
+- If "python not found": Reinstall Python, check "Add to PATH"
+- If "module not found": Make sure venv is activated (see (venv) in command line)
+- If "API key error": Check .env file has correct keys with no extra spaces
+
+FOR HELP:
+- Read WINDOWS_SETUP.md for detailed instructions
+- Check requirements.txt for all dependencies
