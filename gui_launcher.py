@@ -1,30 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Boxing Film Generator - GUI Launcher
-A user-friendly interface to generate women's boxing films
+Boxing Film Generator - Easy Windows App
+Simple, beautiful interface to create boxing films
 """
 
 import sys
 import os
 from pathlib import Path
 import json
-from typing import Optional
+from datetime import datetime
+import threading
+
+# Add project to path
+PROJECT_ROOT = Path(__file__).parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
     import tkinter as tk
     from tkinter import ttk, filedialog, messagebox, scrolledtext
-    from tkinter import font as tkFont
 except ImportError:
-    print("Error: tkinter not found. Please install Python with tkinter support.")
+    print("Error: tkinter not found")
     sys.exit(1)
-
-import threading
-from datetime import datetime
-
-# Add project root to path
-PROJECT_ROOT = Path(__file__).parent
-sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
     from src.generators.screenplay_generator import ScreenplayGenerator
@@ -33,343 +30,324 @@ try:
     from src.visual_style import VISUAL_STYLE_PRESETS
     from config.settings import settings
 except ImportError as e:
-    print(f"Error importing modules: {e}")
-    print("Make sure all dependencies are installed: pip install -r requirements.txt")
+    print(f"Error: {e}")
     sys.exit(1)
 
 
-class BoxingFilmGeneratorGUI:
+class BoxingFilmApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("🎬 Boxing Film Generator - Windows Edition")
-        self.root.geometry("900x700")
-        self.root.resizable(True, True)
+        self.root.title("🎬 Boxing Film Generator")
+        self.root.geometry("950x800")
+        self.root.iconbitmap(default='')  # Remove default icon
         
-        # Set style
-        self.setup_styles()
-        
-        # Create GUI
-        self.creating_gui = True
-        self.create_widgets()
-        self.creating_gui = False
-        
-        # Generator objects
-        self.screenplay_gen = None
-        self.character_gen = None
-        self.scene_gen = None
-        self.is_generating = False
-        
-        # Initialize generators
-        self.initialize_generators()
-    
-    def setup_styles(self):
-        """Configure visual styles"""
+        # Dark theme
+        self.root.config(bg='#1a1a1a')
         style = ttk.Style()
         style.theme_use('clam')
         
-        # Define colors
-        bg_color = "#2b2b2b"
-        fg_color = "#ffffff"
-        accent_color = "#ff6b6b"
+        # Create app
+        self.create_ui()
+        self.init_generators()
+        self.is_generating = False
         
-        style.configure('TFrame', background=bg_color)
-        style.configure('TLabel', background=bg_color, foreground=fg_color)
-        style.configure('TLabelframe', background=bg_color, foreground=fg_color)
-        style.configure('TLabelframe.Label', background=bg_color, foreground=accent_color)
-        style.configure('Header.TLabel', font=('Helvetica', 16, 'bold'), foreground=accent_color)
-        style.configure('Subtitle.TLabel', font=('Helvetica', 10), foreground="#cccccc")
+    def create_ui(self):
+        """Create the user interface"""
         
-    def create_widgets(self):
-        """Create GUI widgets"""
-        # Main container with scrollbar
-        main_frame = ttk.Frame(self.root)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # Main container
+        main = ttk.Frame(self.root, style='Main.TFrame')
+        main.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
         
-        # Header
-        header_frame = ttk.Frame(main_frame)
-        header_frame.pack(fill=tk.X, pady=(0, 20))
+        # TITLE
+        title_frame = ttk.Frame(main)
+        title_frame.pack(fill=tk.X, pady=(0, 20))
         
-        title_label = ttk.Label(header_frame, text="🎬 Boxing Film Generator", style='Header.TLabel')
-        title_label.pack(anchor=tk.W)
+        title = tk.Label(
+            title_frame,
+            text="🎬 BOXING FILM GENERATOR",
+            font=('Arial', 24, 'bold'),
+            fg='#ff6b6b',
+            bg='#1a1a1a'
+        )
+        title.pack(anchor=tk.W)
         
-        subtitle_label = ttk.Label(header_frame, text="Create professional women's boxing films from AI prompts", style='Subtitle.TLabel')
-        subtitle_label.pack(anchor=tk.W)
+        subtitle = tk.Label(
+            title_frame,
+            text="Create professional women's boxing films with AI",
+            font=('Arial', 11),
+            fg='#cccccc',
+            bg='#1a1a1a'
+        )
+        subtitle.pack(anchor=tk.W)
         
-        # Prompt Section
-        prompt_frame = ttk.LabelFrame(main_frame, text="📝 Film Prompt", padding=10)
-        prompt_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        # PROMPT SECTION
+        prompt_label = tk.Label(
+            main,
+            text="📝 What's your film about?",
+            font=('Arial', 12, 'bold'),
+            fg='#ffffff',
+            bg='#1a1a1a'
+        )
+        prompt_label.pack(anchor=tk.W, pady=(10, 5))
         
-        ttk.Label(prompt_frame, text="Enter your story idea:").pack(anchor=tk.W, pady=(0, 5))
-        
-        self.prompt_text = tk.Text(prompt_frame, height=5, width=80, wrap=tk.WORD)
-        self.prompt_text.pack(fill=tk.BOTH, expand=True)
+        self.prompt_text = tk.Text(
+            main,
+            height=4,
+            width=100,
+            font=('Arial', 10),
+            bg='#2b2b2b',
+            fg='#ffffff',
+            insertbackground='#ff6b6b',
+            relief=tk.FLAT,
+            borderwidth=1
+        )
+        self.prompt_text.pack(fill=tk.X, pady=(0, 15))
         self.prompt_text.insert(tk.END, "Two rival female boxers face off in a championship match...")
         
-        # Visual Style Section
-        style_frame = ttk.LabelFrame(main_frame, text="🎨 Visual Style", padding=10)
-        style_frame.pack(fill=tk.X, pady=(0, 10))
+        # STYLE SECTION
+        style_label = tk.Label(
+            main,
+            text="🎨 Choose the look:",
+            font=('Arial', 12, 'bold'),
+            fg='#ffffff',
+            bg='#1a1a1a'
+        )
+        style_label.pack(anchor=tk.W, pady=(0, 10))
         
-        ttk.Label(style_frame, text="Choose the visual aesthetic:").pack(anchor=tk.W, pady=(0, 10))
-        
-        # Create style buttons
-        styles_grid = ttk.Frame(style_frame)
-        styles_grid.pack(fill=tk.X)
+        style_frame = ttk.Frame(main)
+        style_frame.pack(fill=tk.X, pady=(0, 15))
         
         self.selected_style = tk.StringVar(value="stylized_sexy")
         
         styles = [
-            ("✨ Stylized Sexy", "stylized_sexy"),
-            ("🌅 Cinematic Glamorous", "cinematic_glamorous"),
-            ("🏆 Athletic Professional", "athletic_professional"),
-            ("🌙 Moody Intense", "moody_intense"),
-            ("💫 Intimate Close", "intimate_close"),
-            ("⭐ Bright Showcase", "bright_showcase"),
+            ("✨ Sexy & Dramatic", "stylized_sexy"),
+            ("🌅 Glamorous & Warm", "cinematic_glamorous"),
+            ("🏆 Athletic & Professional", "athletic_professional"),
+            ("🌙 Moody & Intense", "moody_intense"),
         ]
         
-        for i, (label, value) in enumerate(styles):
-            row = i // 2
-            col = i % 2
-            rb = ttk.Radiobutton(
-                styles_grid,
+        for label, value in styles:
+            rb = tk.Radiobutton(
+                style_frame,
                 text=label,
                 variable=self.selected_style,
-                value=value
+                value=value,
+                font=('Arial', 10),
+                fg='#ffffff',
+                bg='#1a1a1a',
+                activebackground='#1a1a1a',
+                activeforeground='#ff6b6b',
+                selectcolor='#2b2b2b',
+                highlightthickness=0
             )
-            rb.grid(row=row, column=col, sticky=tk.W, padx=5, pady=5)
+            rb.pack(anchor=tk.W, pady=3)
         
-        # Style description
-        self.style_description = ttk.Label(
-            style_frame,
-            text=self.get_style_description("stylized_sexy"),
-            wraplength=800,
-            justify=tk.LEFT
-        )
-        self.style_description.pack(anchor=tk.W, pady=(10, 0))
+        # API KEY CHECK
+        api_frame = ttk.Frame(main)
+        api_frame.pack(fill=tk.X, pady=(0, 15))
         
-        # Bind style change
-        for widget in styles_grid.winfo_children():
-            if isinstance(widget, ttk.Radiobutton):
-                self.root.bind('<Button-1>', self.update_style_description)
+        if settings.openai_api_key:
+            api_status = tk.Label(
+                api_frame,
+                text="✓ API Key Configured",
+                font=('Arial', 10),
+                fg='#00dd00',
+                bg='#1a1a1a'
+            )
+        else:
+            api_status = tk.Label(
+                api_frame,
+                text="✗ No API Key - Open .env file and add your key",
+                font=('Arial', 10),
+                fg='#ff6b6b',
+                bg='#1a1a1a'
+            )
+        api_status.pack(anchor=tk.W)
         
-        # Output Directory
-        output_frame = ttk.LabelFrame(main_frame, text="📁 Output Location", padding=10)
-        output_frame.pack(fill=tk.X, pady=(0, 10))
+        # BUTTONS
+        button_frame = ttk.Frame(main)
+        button_frame.pack(fill=tk.X, pady=(0, 15))
         
-        self.output_path = tk.StringVar(value=str(Path.home() / "BoxingFilms"))
-        
-        ttk.Label(output_frame, text="Save generated films to:").pack(anchor=tk.W, pady=(0, 5))
-        
-        path_frame = ttk.Frame(output_frame)
-        path_frame.pack(fill=tk.X)
-        
-        ttk.Entry(path_frame, textvariable=self.output_path, state='readonly').pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
-        ttk.Button(path_frame, text="Browse", command=self.browse_output_dir).pack(side=tk.RIGHT)
-        
-        # Generate Button
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=(10, 0))
-        
-        self.generate_button = ttk.Button(
+        self.gen_btn = tk.Button(
             button_frame,
-            text="🚀 Generate Film",
-            command=self.generate_film
+            text="🚀  GENERATE FILM",
+            font=('Arial', 12, 'bold'),
+            bg='#ff6b6b',
+            fg='#ffffff',
+            padx=20,
+            pady=10,
+            relief=tk.FLAT,
+            cursor='hand2',
+            command=self.generate
         )
-        self.generate_button.pack(side=tk.LEFT, padx=(0, 10))
+        self.gen_btn.pack(side=tk.LEFT, padx=(0, 10))
         
-        self.cancel_button = ttk.Button(
+        self.stop_btn = tk.Button(
             button_frame,
-            text="Stop",
-            command=self.cancel_generation,
+            text="⏹ STOP",
+            font=('Arial', 10, 'bold'),
+            bg='#666666',
+            fg='#ffffff',
+            padx=15,
+            pady=10,
+            relief=tk.FLAT,
+            state=tk.DISABLED,
+            command=self.stop
+        )
+        self.stop_btn.pack(side=tk.LEFT)
+        
+        # OUTPUT LOG
+        log_label = tk.Label(
+            main,
+            text="📊 Status:",
+            font=('Arial', 12, 'bold'),
+            fg='#ffffff',
+            bg='#1a1a1a'
+        )
+        log_label.pack(anchor=tk.W, pady=(0, 5))
+        
+        self.log = scrolledtext.ScrolledText(
+            main,
+            height=10,
+            width=100,
+            font=('Arial', 9),
+            bg='#0a0a0a',
+            fg='#00dd00',
+            insertbackground='#ff6b6b',
+            relief=tk.FLAT,
+            borderwidth=1,
             state=tk.DISABLED
         )
-        self.cancel_button.pack(side=tk.LEFT)
+        self.log.pack(fill=tk.BOTH, expand=True)
         
-        ttk.Button(button_frame, text="Open Output Folder", command=self.open_output_folder).pack(side=tk.RIGHT)
+        self.print_log("Ready! Enter your film idea and click GENERATE FILM")
+        self.print_log("")
+        self.print_log("Need a free API key?")
+        self.print_log("Go to: https://platform.openai.com/api-keys")
         
-        # Status/Output
-        output_frame = ttk.LabelFrame(main_frame, text="📊 Generation Log", padding=10)
-        output_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
-        
-        self.output_text = scrolledtext.ScrolledText(
-            output_frame,
-            height=8,
-            width=80,
-            state=tk.DISABLED
-        )
-        self.output_text.pack(fill=tk.BOTH, expand=True)
-        
-        self.log_message("Ready to generate films! Enter a prompt and click 'Generate Film'.")
-    
-    def get_style_description(self, style_key: str) -> str:
-        """Get description for a style"""
-        if style_key in VISUAL_STYLE_PRESETS:
-            return VISUAL_STYLE_PRESETS[style_key].description
-        return ""
-    
-    def update_style_description(self, event=None):
-        """Update style description when selection changes"""
-        if not self.creating_gui:
-            description = self.get_style_description(self.selected_style.get())
-            self.style_description.config(text=description)
-    
-    def initialize_generators(self):
+    def init_generators(self):
         """Initialize AI generators"""
         try:
-            self.log_message("Initializing generators...")
             self.screenplay_gen = ScreenplayGenerator()
             self.character_gen = CharacterGenerator()
             self.scene_gen = SceneGenerator()
-            self.log_message("✓ Generators ready")
+            self.print_log("✓ Generators ready")
         except Exception as e:
-            self.log_message(f"✗ Error initializing generators: {e}")
-            messagebox.showerror("Initialization Error", f"Failed to initialize generators: {e}")
+            self.print_log(f"✗ Error: {e}")
+            messagebox.showerror("Error", f"Failed to initialize: {e}")
     
-    def browse_output_dir(self):
-        """Browse for output directory"""
-        directory = filedialog.askdirectory(title="Select Output Directory")
-        if directory:
-            self.output_path.set(directory)
-    
-    def log_message(self, message: str):
-        """Add message to output log"""
-        self.output_text.config(state=tk.NORMAL)
+    def print_log(self, msg):
+        """Print to log"""
+        self.log.config(state=tk.NORMAL)
         timestamp = datetime.now().strftime("%H:%M:%S")
-        self.output_text.insert(tk.END, f"[{timestamp}] {message}\n")
-        self.output_text.see(tk.END)
-        self.output_text.config(state=tk.DISABLED)
+        self.log.insert(tk.END, f"[{timestamp}] {msg}\n")
+        self.log.see(tk.END)
+        self.log.config(state=tk.DISABLED)
         self.root.update()
     
-    def generate_film(self):
-        """Generate film in background thread"""
+    def generate(self):
+        """Generate film"""
         prompt = self.prompt_text.get("1.0", tk.END).strip()
         
         if not prompt:
-            messagebox.showwarning("Empty Prompt", "Please enter a film prompt.")
+            messagebox.showwarning("Oops!", "Please enter what your film is about.")
             return
         
         if not settings.openai_api_key:
             messagebox.showerror(
                 "Missing API Key",
-                "OpenAI API key not found.\n\nPlease:\n1. Open .env file\n2. Add your API key: OPENAI_API_KEY=sk-..."
+                "Open the .env file in this folder and add your OpenAI API key.\n\n"
+                "Get a free key at: https://platform.openai.com/api-keys"
             )
             return
         
-        # Disable UI during generation
         self.is_generating = True
-        self.generate_button.config(state=tk.DISABLED)
-        self.cancel_button.config(state=tk.NORMAL)
+        self.gen_btn.config(state=tk.DISABLED)
+        self.stop_btn.config(state=tk.NORMAL)
+        self.print_log("\n" + "="*60)
+        self.print_log("Starting generation...")
         
-        # Run generation in background thread
         thread = threading.Thread(
-            target=self._generate_in_background,
-            args=(prompt, self.selected_style.get(), self.output_path.get())
+            target=self._generate_thread,
+            args=(prompt, self.selected_style.get())
         )
         thread.daemon = True
         thread.start()
     
-    def _generate_in_background(self, prompt: str, style: str, output_dir: str):
-        """Background thread for film generation"""
+    def _generate_thread(self, prompt, style):
+        """Generate in background"""
         try:
-            output_path = Path(output_dir) / datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path.mkdir(parents=True, exist_ok=True)
+            output_dir = Path.home() / "BoxingFilms" / datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir.mkdir(parents=True, exist_ok=True)
             
-            self.log_message(f"🎬 Starting generation...")
-            self.log_message(f"Style: {VISUAL_STYLE_PRESETS[style].name}")
-            
-            # Step 1: Generate Screenplay
-            self.log_message("📝 Generating screenplay...")
+            # Screenplay
+            self.print_log("📝 Writing screenplay...")
             screenplay_data = self.screenplay_gen.generate_screenplay(prompt, style)
             screenplay = screenplay_data['screenplay']
+            (output_dir / "screenplay.md").write_text(screenplay)
+            self.print_log("   ✓ Screenplay complete")
             
-            screenplay_path = output_path / "screenplay.md"
-            with open(screenplay_path, 'w') as f:
-                f.write(screenplay)
-            self.log_message(f"✓ Screenplay saved")
-            
-            # Step 2: Generate Characters
-            self.log_message("👯 Generating character profiles...")
+            # Characters
+            self.print_log("👯 Creating characters...")
             characters = self.character_gen.generate_characters(screenplay)
+            (output_dir / "characters.json").write_text(json.dumps(characters, indent=2))
+            self.print_log(f"   ✓ {len(characters)} characters created")
             
-            characters_path = output_path / "characters.json"
-            with open(characters_path, 'w') as f:
-                json.dump(characters, f, indent=2)
-            self.log_message(f"✓ {len(characters)} characters generated")
-            
-            # Step 3: Break Down Scenes
-            self.log_message("🎬 Breaking down scenes...")
+            # Scenes
+            self.print_log("🎬 Breaking down scenes...")
             scenes = self.scene_gen.breakdown_scenes(screenplay, style)
+            (output_dir / "scenes.json").write_text(json.dumps(scenes, indent=2))
+            self.print_log(f"   ✓ {len(scenes)} scenes")
             
-            scenes_path = output_path / "scenes.json"
-            with open(scenes_path, 'w') as f:
-                json.dump(scenes, f, indent=2)
-            self.log_message(f"✓ {len(scenes)} scenes created")
-            
-            # Step 4: Generate Video Prompts
-            self.log_message("🎥 Creating video generation prompts...")
+            # Video Prompts
+            self.print_log("🎥 Creating video prompts...")
             video_prompts = []
             for scene in scenes:
-                lead_character = characters[0] if characters else None
-                enhanced_prompt = self.scene_gen.enhance_scene_video_prompt(scene, style, lead_character)
+                lead = characters[0] if characters else None
+                enhanced = self.scene_gen.enhance_scene_video_prompt(scene, style, lead)
                 video_prompts.append({
                     "scene_number": scene.get('scene_number'),
                     "scene_title": scene.get('title'),
-                    "video_prompt": enhanced_prompt
+                    "video_prompt": enhanced
                 })
+            (output_dir / "video_prompts.json").write_text(json.dumps(video_prompts, indent=2))
+            self.print_log("   ✓ Video prompts ready")
             
-            prompts_path = output_path / "video_prompts.json"
-            with open(prompts_path, 'w') as f:
-                json.dump(video_prompts, f, indent=2)
-            self.log_message(f"✓ Video prompts ready for Runway ML")
+            self.print_log("\n" + "="*60)
+            self.print_log("✓ FILM COMPLETE!")
+            self.print_log("="*60)
+            self.print_log(f"Saved to: {output_dir}")
+            self.print_log("\nFiles created:")
+            self.print_log("  📄 screenplay.md")
+            self.print_log("  👥 characters.json")
+            self.print_log("  🎬 scenes.json")
+            self.print_log("  🎥 video_prompts.json (use with Runway ML)")
+            self.print_log("\nNext: Use video_prompts.json on Runway ML to make videos!")
             
-            self.log_message("")
-            self.log_message("="*60)
-            self.log_message("✅ GENERATION COMPLETE!")
-            self.log_message("="*60)
-            self.log_message(f"Output saved to: {output_path}")
-            self.log_message("")
-            self.log_message("Files created:")
-            self.log_message("  📄 screenplay.md - Full screenplay")
-            self.log_message("  👥 characters.json - Character profiles")
-            self.log_message("  🎬 scenes.json - Scene breakdown")
-            self.log_message("  🎥 video_prompts.json - For Runway ML")
-            self.log_message("")
-            self.log_message("Next: Use video_prompts.json with Runway ML to generate videos")
+            messagebox.showinfo("Success!", f"Film saved to:\n{output_dir}")
             
-            messagebox.showinfo(
-                "Generation Complete",
-                f"Film generated successfully!\n\nSaved to:\n{output_path}"
-            )
+            # Open folder
+            import subprocess
+            subprocess.Popen(f'explorer "{output_dir}"')
             
         except Exception as e:
-            self.log_message(f"✗ Error: {e}")
-            messagebox.showerror("Generation Failed", f"Error during generation: {e}")
+            self.print_log(f"\n✗ ERROR: {e}")
+            messagebox.showerror("Error", f"Generation failed:\n{e}")
         
         finally:
             self.is_generating = False
-            self.generate_button.config(state=tk.NORMAL)
-            self.cancel_button.config(state=tk.DISABLED)
+            self.gen_btn.config(state=tk.NORMAL)
+            self.stop_btn.config(state=tk.DISABLED)
     
-    def cancel_generation(self):
-        """Cancel generation (placeholder)"""
-        self.log_message("Generation cancelled by user")
+    def stop(self):
+        """Stop generation"""
         self.is_generating = False
-        self.generate_button.config(state=tk.NORMAL)
-        self.cancel_button.config(state=tk.DISABLED)
-    
-    def open_output_folder(self):
-        """Open output folder in Windows Explorer"""
-        output_dir = Path(self.output_path.get())
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        import subprocess
-        subprocess.Popen(f'explorer "{output_dir}"')
-
-
-def main():
-    root = tk.Tk()
-    app = BoxingFilmGeneratorGUI(root)
-    root.mainloop()
+        self.print_log("\n⏹ Stopped")
+        self.gen_btn.config(state=tk.NORMAL)
+        self.stop_btn.config(state=tk.DISABLED)
 
 
 if __name__ == "__main__":
-    main()
+    root = tk.Tk()
+    app = BoxingFilmApp(root)
+    root.mainloop()
