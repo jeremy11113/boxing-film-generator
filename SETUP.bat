@@ -1,72 +1,81 @@
 @echo off
-REM ============================================
-REM Boxing Film Generator - Quick Setup
-REM ============================================
-REM This script sets everything up for you
-REM Just double-click and wait!
+REM Automated setup script for Windows
 
-CLS
 echo.
-echo ============================================
-echo   BOXING FILM GENERATOR - SETUP
-echo ============================================
-echo.
-echo This will set up the app on your computer.
-echo (This only needs to run once)
+echo ========================================
+echo   Boxing Film Generator - Setup Wizard
+echo ========================================
 echo.
 
 REM Check Python
-echo Checking Python...
+echo Checking Python installation...
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo.
     echo ERROR: Python not found!
-    echo.
-    echo Please install Python first:
-    echo 1. Go to https://www.python.org/downloads
-    echo 2. Download Python 3.11 or newer
-    echo 3. IMPORTANT: Check "Add Python to PATH"
-    echo 4. Click Install
-    echo 5. Run this file again
-    echo.
+    echo Please install Python from python.org/downloads
+    echo Make sure to check "Add Python to PATH" during installation.
     pause
     exit /b 1
 )
 
-echo OK - Python found
+echo ✓ Python found
 echo.
 
 REM Create virtual environment
+echo Creating Python virtual environment...
 if not exist venv (
-    echo Creating virtual environment...
     python -m venv venv
+    echo ✓ Virtual environment created
+) else (
+    echo ✓ Virtual environment already exists
 )
 
-echo Activating...
+echo.
+echo Activating virtual environment...
 call venv\Scripts\activate.bat
 
-echo Installing packages...
-pip install -r requirements.txt >nul 2>&1
+echo.
+echo Installing dependencies...
+echo This may take a few minutes...
+pip install -r requirements.txt
 
 if errorlevel 1 (
-    echo ERROR during installation
-    pip install -r requirements.txt
+    echo.
+    echo ERROR: Failed to install dependencies
+    echo Make sure you have internet connection
     pause
     exit /b 1
 )
 
 echo.
-echo ============================================
-echo   SETUP COMPLETE!
-echo ============================================
+echo ✓ Dependencies installed
 echo.
-echo Next steps:
-echo 1. Open the .env file (in this folder)
-echo 2. Paste your OpenAI API key
-echo 3. Save the file
-echo 4. Run 'Start App.bat'
+
+REM Setup .env
+if not exist .env (
+    echo Creating .env file from template...
+    copy .env.example .env
+    echo ✓ .env file created
+    echo.
+    echo NEXT STEPS:
+    echo 1. Open .env in Notepad
+    echo 2. Add your OpenAI API key (get from platform.openai.com/api-keys)
+    echo 3. Add your Runway API key (optional, for video generation)
+    echo 4. Save the file
+    echo.
+    echo Then run: python src/main.py -p "Your prompt" -s stylized_sexy
+) else (
+    echo ✓ .env file already configured
+)
+
 echo.
-echo Get free API key:
-echo https://platform.openai.com/api-keys
+echo ========================================
+echo   Setup Complete!
+echo ========================================
+echo.
+echo To generate a film, use:
+echo   python src/main.py -p "your prompt" -s stylized_sexy
+echo.
+echo Or run: run_windows.bat
 echo.
 pause
